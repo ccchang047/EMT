@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>桃園市EMT緊急救護作業程序與給藥計算</title>
+  <meta name="description" content="桃園市政府緊急傷病患救護作業程序手冊快速查詢與EMT給藥劑量計算工具">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white min-h-screen font-sans select-none">
+  <div id="app" class="max-w-3xl mx-auto p-4"></div>
+
+  <script>
+    const protocols = {
+      nonTrauma: [
+        { id: 'nt1', title: 'OHCA', type: 'ohca_text' },
+        { id: 'nt2', title: '非創傷二「呼吸困難救護流程」', type: 'detail', content: '一、Combivent 氣霧治療（EMT-P）：對象為1歲以上且無心肌梗塞病史。將 Atrovent + Salbutamol 置入噴霧器，氧氣流速開至 6 L/min 霧化吸入。\n二、EMT-II 可協助使用患者自備吸入型短效支氣管擴張劑（10分鐘後未改善可再協助給予）。' },
+        { id: 'nt3', title: '非創傷三「意識不清救護流程」', type: 'detail', content: '血糖低於 60 mg/dl 處置：\n一、考慮給予口服葡萄糖（塗抹於牙齦）。\n二、EMT-II 可由周邊血管路徑給予 5% 葡萄糖注射液（D5W）。\n三、EMT-P 可給予 D5W 後，推注 50% 葡萄糖注射液（D50W）2-4 amp。' },
+        { id: 'nt4', title: '非創傷四「抽搐救護流程」', type: 'detail', content: '積極維持呼吸道暢通，維持 SpO2 ≧ 94%。\n若血糖低於 60 mg/dl：\n一、塗抹口服葡萄糖於牙齦。\n二、EMT-II 給予 5% 葡萄糖注射液。\n三、EMT-P 給予 5% 葡萄糖注射液後，推注 50% 葡萄糖注射液 2-4 amp。' },
+        { id: 'nt5', title: '非創傷五「致命性過敏救護流程」', type: 'calc_epi_im' },
+        { id: 'nt6', title: '非創傷六「疑似急性腦中風救護流程」', type: 'detail', content: '一、檢查辛辛那提中風指標（FAST）或 G-FAST（發作 4.5~24 小時加測凝視）。\n二、血糖低於 60 mg/dl 時依低血糖給藥處置。\n三、確認最後正常時間，後送姿勢建議頭部抬高 30 度或半坐臥，聯絡可施打 t-PA（<4.5小時）或機械取栓（<24小時）之急救責任醫院。' },
+        { id: 'nt7', title: '非創傷七「疑似缺血性胸痛救護流程」', type: 'detail', content: '一、若收縮壓 < 90 mmHg，給予 N/S 250 ml。\n二、排除禁忌症（SBP<90、HR<50或≧100、服用壯陽藥、右心梗塞）後，EMT-II 協助或 EMT-P 給予 NTG 舌下含片，每 5 分鐘 1 顆，最多 3 次。\n三、排除禁忌症（過敏、出血病史、疑似主動脈剝離）後，EMT-P 給予口服 Aspirin 300 mg。' },
+        { id: 'nt8', title: '非創傷八「急性心臟衰竭救護流程」', type: 'detail', content: '一、有症狀緩脈（HR < 50）：EMT-P 給予 Atropine 1 mg IV，每 3 分鐘可追加 1 劑（最多 3 劑），無效考慮 TCP。\n二、有症狀頻脈（HR > 150）：EMT-P 啟動線上醫療指導考慮同步整流。\n三、體液不足且 SBP < 90 mmHg：給予 N/S 250 ml。\n四、肺水腫且血壓上升：排除禁忌症後 EMT-P 考慮給予 NTG 舌下含片。' },
+        { id: 'nt9', title: '非創傷九「非創傷休克救護流程」', type: 'detail', content: '一、計算休克指數（SI = 脈搏 / 收縮壓），大於 1 需高度懷疑休克。\n二、維持 SpO2 92-98%、保暖、無禁忌症考慮抬高下肢。\n三、除急性心臟衰竭伴肺水腫外，考慮嘗試靜脈輸液。' }
+      ],
+      trauma: [
+        { id: 't1', title: '創傷OHCA', type: 'ohca_text' },
+        { id: 't2', title: '創傷二「頭部外傷救護流程」', type: 'detail', content: '一、維持足夠腦部灌流血壓（收縮壓目標 ≧ 110 mmHg）。\n二、若出現腦壓升高或腦疝徵象（庫欣氏三徵象：血壓上升、心跳變慢、呼吸不規則），使用 BVM 輕度過度換氣（成人 20 次/分，兒童 25 次/分，嬰兒 30 次/分，維持 EtCO2 約 35 mmHg）。' },
+        { id: 't3', title: '創傷三「胸部外傷救護流程」', type: 'detail', content: '一、開放性氣胸：使用胸封貼片或不透氣敷料貼三邊留一邊。\n二、張力性氣胸：進入張力性氣胸流程，EMT-P 考慮針刺減壓。\n三、穿刺物不可拔除，應予固定。' },
+        { id: 't4', title: '創傷四「腹部外傷救護流程」', type: 'detail', content: '一、臟器外露：以生理食鹽水濕紗覆蓋包紮，不可塞回。\n二、骨盆骨折：骨盆穩定度檢查以 1 次為限，優先使用骨盆固定帶固定。' },
+        { id: 't5', title: '創傷五「肢體外傷救護流程」', type: 'detail', content: '一、直接加壓止血；交界處可填塞無菌敷料；大出血或截肢儘早使用止血帶（綁在近心端 5-8 公分處並標記時間）。\n二、斷肢處理：生理食鹽水輕沖洗，濕紗包覆放內袋，外袋裝冰塊（隔水保冰，不可直接冷凍）。' },
+        { id: 't6', title: '創傷六「創傷出血性休克救護流程」', type: 'calc_trauma_shock' },
+        { id: 't7', title: '創傷七「張力性氣胸救護流程」', type: 'detail', content: '當出現嚴重呼吸窘迫、患側呼吸音變小或聽不到、且收縮壓 < 90 mmHg 時，EMT-P 實行針刺減壓（16號針頭）：\n位置：患側第五肋間腋前線，或患側前胸第二肋間與鎖骨中線交界處（第三肋骨上緣）。' }
+      ],
+      special: [
+        { id: 's1', title: '特殊一「火場救出救護流程」', type: 'detail', content: '一、一律使用非再吸入型面罩給予 15 L/min 高濃度氧氣。\n二、若有吸入性灼傷且出現上呼吸道阻塞徵象（喘鳴音 Stridor 等），EMT-P 給予 Epinephrine 氣霧治療：\n成人與 >1歲兒童：1 mg Epinephrine + 3 ml 0.9% N/S，流速 6 L/min 霧化吸入（3個月~1歲劑量減半；<3個月為 1/4）。' },
+        { id: 's2', title: '特殊二「灼燙傷救護流程」', type: 'calc_burn' },
+        { id: 's4', title: '特殊四「中毒、藥物過量、化學性傷害救護流程」', type: 'calc_poison' },
+        { id: 's8', title: '特殊八「小兒通用救護流程」', type: 'calc_peds' }
+      ]
+    };
+
+    let state = {
+      screen: 'home', // home, menu, detail
+      category: null,
+      item: null,
+      weight: 60,
+      age: 5,
+      bsa: 20
+    };
+
+    function setState(newState) {
+      state = { ...state, ...newState };
+      render();
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+
+      if (state.screen === 'home') {
+        app.innerHTML = `
+          <div class="flex flex-col gap-6 pt-6">
+            <h1 class="text-3xl font-bold text-center border-b border-gray-700 pb-4">桃園市 EMT 救護作業程序</h1>
+            <button onclick="setState({screen: 'menu', category: 'nonTrauma'})" class="w-full py-14 bg-blue-800 hover:bg-blue-700 active:bg-blue-900 text-white text-5xl font-black rounded-2xl border-4 border-blue-400">
+              非創傷
+            </button>
+            <button onclick="setState({screen: 'menu', category: 'trauma'})" class="w-full py-14 bg-red-800 hover:bg-red-700 active:bg-red-900 text-white text-5xl font-black rounded-2xl border-4 border-red-400">
+              創傷
+            </button>
+            <button onclick="setState({screen: 'menu', category: 'special'})" class="w-full py-8 bg-amber-800 hover:bg-amber-700 active:bg-amber-900 text-white text-3xl font-bold rounded-2xl border-4 border-amber-400">
+              特殊與小兒流程（含劑量計算）
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.screen === 'menu') {
+        const list = protocols[state.category] || [];
+        const catTitle = state.category === 'nonTrauma' ? '非創傷流程目錄' : state.category === 'trauma' ? '創傷流程目錄' : '特殊流程目錄';
+        app.innerHTML = `
+          <div class="flex flex-col gap-4">
+            <div class="flex items-center justify-between border-b border-gray-700 pb-4">
+              <button onclick="setState({screen: 'home'})" class="px-6 py-3 bg-gray-800 text-white text-xl font-bold rounded-xl border-2 border-gray-500">
+                返回首頁
+              </button>
+              <h2 class="text-2xl font-bold">${catTitle}</h2>
+            </div>
+            <div class="flex flex-col gap-3 pt-2">
+              ${list.map(item => `
+                <button onclick="selectItem('${state.category}', '${item.id}')" class="w-full p-6 text-left bg-gray-900 hover:bg-gray-800 text-white text-2xl font-bold rounded-xl border-2 border-gray-600">
+                  ${item.title}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.screen === 'detail') {
+        const item = state.item;
+        let bodyHTML = '';
+
+        if (item.type === 'ohca_text') {
+          bodyHTML = `
+            <div class="bg-gray-900 p-6 rounded-2xl border-2 border-yellow-500 text-2xl leading-relaxed space-y-6 font-bold">
+              <p>一、 每4 分鐘重複給予Epinephrine（1:1000），1mg，靜脈或骨內推注；即以2 分鐘CPR 為1 個循環計算，每間隔 1 個循環重複給予。</p>
+              <p>二、 遇頑固型無脈VT 或Vf 時，給予Amiodarone ，第1 次劑量為300mg，第二次劑量為150mg，靜脈或骨內推注，時間間隔為 2 分鐘（建議為AED 再次分析及電擊後）。</p>
+              <p>三、 Epinephrine 與Amiodarone 推注時間間隔建議為1 分鐘。</p>
+            </div>
+          `;
+        } else if (item.type === 'calc_epi_im') {
+          const pedsDose = Math.min((state.weight * 0.01).toFixed(2), 0.3);
+          bodyHTML = `
+            ${renderWeightControl()}
+            <div class="bg-gray-900 p-6 rounded-2xl border-2 border-blue-400 space-y-4 text-2xl font-bold mt-4">
+              <div class="text-yellow-400 text-3xl">Epinephrine (1:1000) 肌肉注射 (IM)</div>
+              <p>成人劑量：0.3 - 0.5 mg（依體型，至多 0.5 mg）</p>
+              <p class="text-green-400">小兒計算劑量（0.01 mg/kg，上限 0.3 mg）：<span class="text-4xl underline">${pedsDose} mg</span></p>
+              <p class="text-gray-300 text-xl">注射部位：大腿外側或上臂三角肌。若未改善可每 10-15 分鐘重複給予。</p>
+            </div>
+          `;
+        } else if (item.type === 'calc_trauma_shock') {
+          const pedsFluid = state.weight * 20;
+          bodyHTML = `
+            ${renderWeightControl()}
+            <div class="bg-gray-900 p-6 rounded-2xl border-2 border-red-400 space-y-6 text-2xl font-bold mt-4">
+              <div>
+                <div class="text-yellow-400 text-3xl mb-2">一、快速輸液治療（生理食鹽水）</div>
+                <p>成人（>40 kg）：每次快速輸注 <span class="text-green-400 text-3xl">250 ml</span></p>
+                <p>兒童（20 ml/kg）：每次快速輸注 <span class="text-green-400 text-3xl">${pedsFluid} ml</span></p>
+                <p class="text-gray-300 text-xl mt-1">目標收縮壓：無腦損傷維持 90 mmHg；懷疑腦損傷（TBI）維持 110 mmHg。</p>
+              </div>
+              <div class="border-t border-gray-700 pt-4">
+                <div class="text-yellow-400 text-3xl mb-2">二、Transamine (TXA) 滴注（EMT-P）</div>
+                <p>條件：無法控制之內外出血、SBP < 90 mmHg（或休克）、受傷 3 小時內。</p>
+                <p class="text-green-400 mt-2">劑量：1,000 mg 加入 100 ml 生理食鹽水，滴注約 10 分鐘（約每秒 3 滴）。</p>
+              </div>
+            </div>
+          `;
+        } else if (item.type === 'calc_burn') {
+          const adultFluid = 2 * state.weight * state.bsa;
+          const pedsFluid = 3 * state.weight * state.bsa;
+          const elecFluid = 4 * state.weight * state.bsa;
+          bodyHTML = `
+            ${renderWeightControl()}
+            <div class="bg-gray-900 p-4 rounded-xl border border-gray-600 mt-4">
+              <div class="text-xl font-bold mb-2">二度+三度灼燙傷體表面積 (TBSA %)：<span class="text-3xl text-yellow-400">${state.bsa} %</span></div>
+              <div class="flex gap-2">
+                <button onclick="setState({bsa: Math.max(5, state.bsa - 5)})" class="flex-1 py-4 bg-gray-800 text-2xl font-bold rounded-lg border border-gray-500">- 5%</button>
+                <button onclick="setState({bsa: Math.min(100, state.bsa + 5)})" class="flex-1 py-4 bg-gray-800 text-2xl font-bold rounded-lg border border-gray-500">+ 5%</button>
+              </div>
+            </div>
+            <div class="bg-gray-900 p-6 rounded-2xl border-2 border-amber-400 space-y-4 text-2xl font-bold mt-4">
+              <div class="text-yellow-400 text-3xl">灼燙傷溫暖輸液總量（前8小時給一半）</div>
+              <p>成人/青少年(≧14歲) [2ml×kg×%]：<span class="text-green-400 text-3xl">${adultFluid} ml</span> (前8hr: ${adultFluid/2} ml)</p>
+              <p>兒童(<14歲)/幼童(≦30kg) [3ml×kg×%]：<span class="text-green-400 text-3xl">${pedsFluid} ml</span> (前8hr: ${pedsFluid/2} ml)</p>
+              <p>電擊傷(所有年齡) [4ml×kg×%]：<span class="text-green-400 text-3xl">${elecFluid} ml</span> (前8hr: ${elecFluid/2} ml)</p>
+            </div>
+          `;
+        } else if (item.type === 'calc_poison') {
+          const pedsAtropine = (state.weight * 0.025).toFixed(2);
+          bodyHTML = `
+            ${renderWeightControl()}
+            <div class="bg-gray-900 p-6 rounded-2xl border-2 border-green-500 space-y-4 text-2xl font-bold mt-4">
+              <div class="text-yellow-400 text-3xl">有機磷中毒（出現 Killer B 症狀）</div>
+              <p>成人 Atropine IV 劑量：<span class="text-green-400 text-3xl">1 mg</span></p>
+              <p>小兒 Atropine IV 劑量 (0.025 mg/kg)：<span class="text-green-400 text-3xl">${pedsAtropine} mg</span></p>
+              <p class="text-gray-300 text-xl">注射後若未改善，可每 5-10 分鐘重複給予（最大劑量 3 mg）。</p>
+            </div>
+          `;
+        } else if (item.type === 'calc_peds') {
+          const d25wMin = state.weight * 2;
+          const d25wMax = state.weight * 4;
+          bodyHTML = `
+            ${renderWeightControl()}
+            <div class="bg-gray-900 p-6 rounded-2xl border-2 border-purple-400 space-y-4 text-2xl font-bold mt-4">
+              <div class="text-yellow-400 text-3xl">小兒低血糖 D25W 劑量（EMT-P）</div>
+              <p>泡製方式：將 D50W 與注射用生理食鹽水以 1:1 混合。</p>
+              <p>建議推注劑量 (2-4 ml/kg)：<span class="text-green-400 text-4xl">${d25wMin} ~ ${d25wMax} ml</span></p>
+            </div>
+          `;
+        } else {
+          bodyHTML = `
+            <div class="bg-gray-900 p-6 rounded-2xl border-2 border-gray-500 text-2xl leading-relaxed whitespace-pre-line font-bold">${item.content}</div>
+          `;
+        }
+
+        app.innerHTML = `
+          <div class="flex flex-col gap-4">
+            <div class="flex items-center justify-between border-b border-gray-700 pb-4">
+              <button onclick="setState({screen: 'menu'})" class="px-6 py-3 bg-gray-800 text-white text-xl font-bold rounded-xl border-2 border-gray-500">
+                返回目錄
+              </button>
+              <h2 class="text-xl font-bold text-right">${item.title}</h2>
+            </div>
+            ${bodyHTML}
+          </div>
+        `;
+      }
+    }
+
+    function renderWeightControl() {
+      return `
+        <div class="bg-gray-900 p-4 rounded-xl border border-gray-600">
+          <div class="text-xl font-bold mb-2">患者體重：<span class="text-4xl text-yellow-400">${state.weight} kg</span></div>
+          <div class="grid grid-cols-4 gap-2">
+            <button onclick="setState({weight: Math.max(1, state.weight - 10)})" class="py-4 bg-gray-800 text-2xl font-bold rounded-lg border border-gray-500">-10</button>
+            <button onclick="setState({weight: Math.max(1, state.weight - 1)})" class="py-4 bg-gray-800 text-2xl font-bold rounded-lg border border-gray-500">-1</button>
+            <button onclick="setState({weight: state.weight + 1})" class="py-4 bg-gray-800 text-2xl font-bold rounded-lg border border-gray-500">+1</button>
+            <button onclick="setState({weight: state.weight + 10})" class="py-4 bg-gray-800 text-2xl font-bold rounded-lg border border-gray-500">+10</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectItem(category, id) {
+      const item = protocols[category].find(i => i.id === id);
+      setState({ screen: 'detail', item });
+    }
+
+    render();
+  </script>
+</body>
+</html>
